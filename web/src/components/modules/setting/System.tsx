@@ -21,14 +21,12 @@ export function SettingSystem() {
     const [corsInputValue, setCorsInputValue] = useState('');
     const [wsUpgradeEnabled, setWsUpgradeEnabled] = useState(false);
     const [sseHeartbeatInterval, setSseHeartbeatInterval] = useState('');
-    const [nonStreamMaxDuration, setNonStreamMaxDuration] = useState('');
 
     const initialProxyUrl = useRef('');
     const initialStatsSaveInterval = useRef('');
     const initialCorsAllowOrigins = useRef('');
     const initialWsUpgradeEnabled = useRef(false);
     const initialSseHeartbeatInterval = useRef('');
-    const initialNonStreamMaxDuration = useRef('');
 
     useEffect(() => {
         if (settings) {
@@ -37,7 +35,6 @@ export function SettingSystem() {
             const cors = settings.find(s => s.key === SettingKey.CORSAllowOrigins);
             const wsUpgrade = settings.find(s => s.key === SettingKey.RelayWSUpgradeEnabled);
             const sseHeartbeat = settings.find(s => s.key === SettingKey.SSEHeartbeatInterval);
-            const nonStreamMax = settings.find(s => s.key === SettingKey.NonStreamMaxDurationSec);
             if (proxy) {
                 queueMicrotask(() => setProxyUrl(proxy.value));
                 initialProxyUrl.current = proxy.value;
@@ -59,10 +56,6 @@ export function SettingSystem() {
                 queueMicrotask(() => setSseHeartbeatInterval(sseHeartbeat.value));
                 initialSseHeartbeatInterval.current = sseHeartbeat.value;
             }
-            if (nonStreamMax) {
-                queueMicrotask(() => setNonStreamMaxDuration(nonStreamMax.value));
-                initialNonStreamMaxDuration.current = nonStreamMax.value;
-            }
         }
     }, [settings]);
 
@@ -82,8 +75,6 @@ export function SettingSystem() {
                     initialWsUpgradeEnabled.current = value === 'true';
                 } else if (key === SettingKey.SSEHeartbeatInterval) {
                     initialSseHeartbeatInterval.current = value;
-                } else if (key === SettingKey.NonStreamMaxDurationSec) {
-                    initialNonStreamMaxDuration.current = value;
                 }
             }
         });
@@ -282,33 +273,6 @@ export function SettingSystem() {
                     onChange={(e) => setSseHeartbeatInterval(e.target.value)}
                     onBlur={() => handleSave(SettingKey.SSEHeartbeatInterval, sseHeartbeatInterval, initialSseHeartbeatInterval.current)}
                     placeholder={t('sseHeartbeat.placeholder')}
-                    className="w-48 rounded-xl"
-                />
-            </div>
-
-            {/* 非流式请求总耗时硬上限 */}
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('nonStreamMaxDuration.label')}</span>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <HelpCircle className="size-4 text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                {t('nonStreamMaxDuration.description')}
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
-                <Input
-                    type="number"
-                    min="0"
-                    value={nonStreamMaxDuration}
-                    onChange={(e) => setNonStreamMaxDuration(e.target.value)}
-                    onBlur={() => handleSave(SettingKey.NonStreamMaxDurationSec, nonStreamMaxDuration, initialNonStreamMaxDuration.current)}
-                    placeholder={t('nonStreamMaxDuration.placeholder')}
                     className="w-48 rounded-xl"
                 />
             </div>

@@ -122,17 +122,9 @@ func ImagesHandler(endpoint string, c *gin.Context) {
 	metrics := newImagesRelayMetrics(apiKeyID, requestModel)
 	metrics.RequestContent = buildImagesRequestContentForLog(isMultipart, bc, jsonPayload)
 
-	// === 早期心跳与非流式 deadline ===
+	// === 早期心跳 ===
 	// 流式：启动早期心跳协程，覆盖前置阶段（连接慢、failover、退避）期间向客户端发 SSE 注释字节
-	// 非流式：设置总耗时硬上限，超时本地返回 504，避免被 Cloudflare 截断为 524
-	if !stream {
-		if maxSec, _ := op.SettingGetInt(model.SettingKeyNonStreamMaxDurationSec); maxSec > 0 {
-			deadlineCtx, cancelDeadline := context.WithTimeout(ctx, time.Duration(maxSec)*time.Second)
-			defer cancelDeadline()
-			ctx = deadlineCtx
-			c.Request = c.Request.WithContext(deadlineCtx)
-		}
-	}
+	// 非流式：无法发送 SSE 注释（破坏 application/json 协议），不施加本地超时
 	hb := startEarlyHeartbeat(c, stream)
 	defer hb.Stop()
 

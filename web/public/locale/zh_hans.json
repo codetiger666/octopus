@@ -166,11 +166,6 @@
             "description": "设置为 0 禁用心跳；Cloudflare 反代场景建议 30-60 秒。部分客户端可能错误处理 SSE 注释，如遇兼容问题可关闭。",
             "placeholder": "0 = 禁用，建议 30-60"
         },
-        "nonStreamMaxDuration": {
-            "label": "非流式请求总耗时上限（秒）",
-            "description": "非流式请求无法发送 SSE 心跳，仅靠该上限限制总耗时；超时本地返回 504，避免被 Cloudflare 等代理判定为 524。0 表示禁用。建议略低于代理超时（如 Cloudflare 120 秒，建议设为 100）。",
-            "placeholder": "0 = 禁用，建议 100"
-        },
         "circuitBreaker": {
             "title": "熔断器配置",
             "threshold": {

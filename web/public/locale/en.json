@@ -166,11 +166,6 @@
             "description": "Set to 0 to disable heartbeat; 30-60 seconds is recommended behind Cloudflare. Some clients may mishandle SSE comments, so disable it if compatibility issues occur.",
             "placeholder": "0 = disabled, recommend 30-60"
         },
-        "nonStreamMaxDuration": {
-            "label": "Non-stream Request Max Duration (seconds)",
-            "description": "Non-streaming requests cannot send SSE heartbeats. This caps total handler duration; on timeout the server returns 504 locally, preventing Cloudflare 524. 0 disables. Recommended slightly below the proxy timeout (e.g. 100 for Cloudflare's 120s).",
-            "placeholder": "0 = disabled, recommend 100"
-        },
         "circuitBreaker": {
             "title": "Circuit Breaker",
             "threshold": {

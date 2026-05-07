@@ -90,18 +90,12 @@ func Handler(inboundType inbound.InboundType, c *gin.Context) {
 		return
 	}
 
-	// === 早期心跳与非流式 deadline ===
+	// === 早期心跳 ===
 	// 在所有 forward / 重试 / 退避之前启动早期心跳协程，覆盖前置阶段（连接慢、failover、退避叠加）
 	// 期间向客户端发 SSE 注释字节，避免被 Cloudflare 在 120s 零字节阈值上判 524。
-	// 非流式请求无法发心跳（破坏 application/json 协议），改为设置总耗时硬上限，超时本地返回 504。
+	// 仅对流式请求生效；非流式无法发送 SSE 注释（破坏 application/json 协议），
+	// 不施加任何本地超时——上游慢响应应让其自然完成或由上游/CF 自身处理。
 	isStream := internalRequest.Stream != nil && *internalRequest.Stream
-	if !isStream {
-		if maxSec, _ := op.SettingGetInt(dbmodel.SettingKeyNonStreamMaxDurationSec); maxSec > 0 {
-			deadlineCtx, cancelDeadline := context.WithTimeout(c.Request.Context(), time.Duration(maxSec)*time.Second)
-			defer cancelDeadline()
-			c.Request = c.Request.WithContext(deadlineCtx)
-		}
-	}
 	hb := startEarlyHeartbeat(c, isStream)
 	defer hb.Stop()
 

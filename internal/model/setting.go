@@ -23,7 +23,6 @@ const (
 	SettingKeyCircuitBreakerMaxCooldown SettingKey = "circuit_breaker_max_cooldown" // 熔断最大冷却时间（秒），指数退避上限
 	SettingKeyRelayWSUpgradeEnabled     SettingKey = "relay_ws_upgrade_enabled"     // 是否主动尝试WS上游连接（双向降级）
 	SettingKeySSEHeartbeatInterval      SettingKey = "sse_heartbeat_interval"       // SSE 流式心跳间隔（秒），0 表示禁用
-	SettingKeyNonStreamMaxDurationSec   SettingKey = "nonstream_max_duration_sec"   // 非流式请求总耗时硬上限（秒），早于 Cloudflare 524 阈值返回 504，0 表示禁用
 	SettingKeyJWTSecret                 SettingKey = "jwt_secret"                   // JWT 签名密钥（自动生成）
 	SettingKeyStatsSiteModelBackfilled  SettingKey = "stats_site_model_backfilled"  // 站点渠道小时聚合是否已回填历史日志
 )
@@ -49,7 +48,6 @@ func DefaultSettings() []Setting {
 		{Key: SettingKeyCircuitBreakerMaxCooldown, Value: "600"}, // 默认最大冷却600秒（10分钟）
 		{Key: SettingKeyRelayWSUpgradeEnabled, Value: "false"},   // 默认关闭主动WS上游升级
 		{Key: SettingKeySSEHeartbeatInterval, Value: "0"},        // 默认禁用 SSE 流式心跳
-		{Key: SettingKeyNonStreamMaxDurationSec, Value: "100"},   // 默认 100 秒，早于 Cloudflare 524 阈值（120 秒）触发本地 504
 		{Key: SettingKeyJWTSecret, Value: ""},                    // 为空时自动生成
 		{Key: SettingKeyStatsSiteModelBackfilled, Value: "false"},
 	}
@@ -66,15 +64,6 @@ func (s *Setting) Validate() error {
 		}
 		return nil
 	case SettingKeySSEHeartbeatInterval:
-		value, err := strconv.Atoi(s.Value)
-		if err != nil {
-			return fmt.Errorf("setting value must be an integer")
-		}
-		if value < 0 {
-			return fmt.Errorf("setting value must be non-negative")
-		}
-		return nil
-	case SettingKeyNonStreamMaxDurationSec:
 		value, err := strconv.Atoi(s.Value)
 		if err != nil {
 			return fmt.Errorf("setting value must be an integer")

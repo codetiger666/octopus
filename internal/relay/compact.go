@@ -85,13 +85,6 @@ func HandleResponsesCompact(c *gin.Context) {
 		return
 	}
 
-	// 非流式请求总耗时硬上限：早于 Cloudflare 524 阈值（120 秒）触发本地 504
-	if maxSec, _ := op.SettingGetInt(dbmodel.SettingKeyNonStreamMaxDurationSec); maxSec > 0 {
-		deadlineCtx, cancelDeadline := context.WithTimeout(c.Request.Context(), time.Duration(maxSec)*time.Second)
-		defer cancelDeadline()
-		c.Request = c.Request.WithContext(deadlineCtx)
-	}
-
 	metricsReq := &transformerModel.InternalLLMRequest{Model: requestModel, RawRequest: body}
 	metrics := NewRelayMetrics(apiKeyID, requestModel, body, metricsReq)
 
