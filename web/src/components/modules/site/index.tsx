@@ -13,7 +13,6 @@ import {
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  type AllAPIHubImportResult,
   Site as SiteRecord,
   SiteAccount,
   SiteCredentialType,
