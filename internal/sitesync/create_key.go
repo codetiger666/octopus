@@ -192,8 +192,13 @@ func createSub2APIToken(ctx context.Context, siteRecord *model.Site, account *mo
 						headers,
 						account,
 					)
-					if err == nil && siteTokenCreateSucceeded(payload) {
-						return nil
+					if err == nil {
+						if data, envelopeErr := unwrapSub2APIData(payload, endpoint); envelopeErr == nil && siteTokenCreateSucceededFromAny(data) {
+							return nil
+						}
+						if siteTokenCreateSucceeded(payload) {
+							return nil
+						}
 					}
 				}
 			}
@@ -201,6 +206,13 @@ func createSub2APIToken(ctx context.Context, siteRecord *model.Site, account *mo
 				firstErr = err
 			}
 			continue
+		}
+		if data, envelopeErr := unwrapSub2APIData(payload, endpoint); envelopeErr == nil {
+			if siteTokenCreateSucceededFromAny(data) {
+				return nil
+			}
+		} else {
+			return envelopeErr
 		}
 		if siteTokenCreateSucceeded(payload) {
 			return nil
@@ -255,6 +267,14 @@ func defaultSiteTokenCreateName(account *model.SiteAccount, groupKey string, nam
 func siteTokenCreateSucceeded(payload map[string]any) bool {
 	if payload == nil {
 		return false
+	}
+	return siteTokenCreateSucceededFromAny(payload)
+}
+
+func siteTokenCreateSucceededFromAny(value any) bool {
+	payload, ok := value.(map[string]any)
+	if !ok {
+		return value != nil
 	}
 	if raw, ok := payload["success"]; ok {
 		switch typed := raw.(type) {
