@@ -41,6 +41,19 @@ const errorMessages: Record<Locale, unknown> = {
 
 type ErrorValues = Record<string, string | number>;
 
+function getErrorMessageFallbacks(locale: Locale): unknown[] {
+    if (locale.startsWith('en')) {
+        return [errorMessages.en, errorMessages.zh_hans];
+    }
+    if (locale === 'zh_hant') {
+        return [errorMessages.zh_hant, errorMessages.zh_hans, errorMessages.en];
+    }
+    if (locale === 'zh_hans') {
+        return [errorMessages.zh_hans, errorMessages.en];
+    }
+    return [errorMessages.en, errorMessages.zh_hans];
+}
+
 function lookupMessage(source: unknown, path: string): string | null {
     let current: unknown = source;
     for (const part of path.split('.')) {
@@ -66,9 +79,9 @@ export function translateApiErrorCode(
     if (!normalizedCode) return fallback;
 
     const locale = useSettingStore.getState().locale;
-    const translated = lookupMessage(errorMessages[locale], normalizedCode)
-        || lookupMessage(errorMessages.zh_hans, normalizedCode)
-        || lookupMessage(errorMessages.en, normalizedCode);
+    const translated = getErrorMessageFallbacks(locale)
+        .map((source) => lookupMessage(source, normalizedCode))
+        .find((message): message is string => Boolean(message));
 
     return translated ? interpolate(translated, values) : fallback;
 }
