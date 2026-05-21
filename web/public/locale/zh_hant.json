@@ -83,6 +83,27 @@
                     "priced": "僅收費",
                     "free": "僅免費"
                 }
+            },
+            "logRefresh": {
+                "refresh": "刷新日誌"
+            },
+            "logFilter": {
+                "title": "日誌篩選",
+                "clearAll": "清除篩選",
+                "date": {
+                    "title": "時間範圍",
+                    "startPlaceholder": "開始時間",
+                    "endPlaceholder": "結束時間",
+                    "clear": "清除時間",
+                    "hint": "可選時間會受設定中的日誌保留天數限制。"
+                },
+                "channel": {
+                    "title": "供應源",
+                    "searchPlaceholder": "搜尋供應源...",
+                    "manualGroup": "一般供應源",
+                    "siteFallback": "站點 #{id}",
+                    "empty": "找不到供應源"
+                }
             }
         }
     },
@@ -541,6 +562,23 @@
             "billInput": "計費輸入",
             "cacheRead": "快取讀取",
             "cacheWrite": "快取寫入"
+        },
+        "filters": {
+            "keywordPlaceholder": "搜尋模型、API Key 或內容",
+            "channel": "供應源",
+            "allChannels": "全部供應源",
+            "status": "狀態",
+            "allStatus": "全部狀態",
+            "success": "成功",
+            "error": "錯誤",
+            "reset": "重置",
+            "refresh": "刷新"
+        },
+        "pagination": {
+            "prev": "上一頁",
+            "next": "下一頁",
+            "page": "第 {page} 頁",
+            "pagesRange": "第 {from} ~ {to} 頁"
         }
     },
     "channel": {

@@ -83,6 +83,27 @@
                     "priced": "Priced only",
                     "free": "Free only"
                 }
+            },
+            "logRefresh": {
+                "refresh": "Refresh logs"
+            },
+            "logFilter": {
+                "title": "Log filters",
+                "clearAll": "Clear filters",
+                "date": {
+                    "title": "Time range",
+                    "startPlaceholder": "Start time",
+                    "endPlaceholder": "End time",
+                    "clear": "Clear time",
+                    "hint": "Selectable time is limited by the log retention period in Settings."
+                },
+                "channel": {
+                    "title": "Channel",
+                    "searchPlaceholder": "Search channels...",
+                    "manualGroup": "Manual channels",
+                    "siteFallback": "Site #{id}",
+                    "empty": "No channels found"
+                }
             }
         }
     },
@@ -541,6 +562,23 @@
             "billInput": "Billed Input",
             "cacheRead": "Cache Read",
             "cacheWrite": "Cache Write"
+        },
+        "filters": {
+            "keywordPlaceholder": "Search model, API key or content",
+            "channel": "Channel",
+            "allChannels": "All channels",
+            "status": "Status",
+            "allStatus": "All status",
+            "success": "Success",
+            "error": "Error",
+            "reset": "Reset",
+            "refresh": "Refresh"
+        },
+        "pagination": {
+            "prev": "Prev",
+            "next": "Next",
+            "page": "Page {page}",
+            "pagesRange": "Pages {from}–{to}"
         }
     },
     "channel": {
