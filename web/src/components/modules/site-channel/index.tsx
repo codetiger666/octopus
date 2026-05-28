@@ -12,6 +12,7 @@ import {
     Check,
     CheckCircle2,
     CircleAlert,
+    CirclePause,
     CircleOff,
     Clock,
     DollarSign,
@@ -1795,6 +1796,8 @@ function SiteAccountPanel({
         ? account.groups.find((group) => group.group_key === activeFilter.groupKey) ?? null
         : null;
     const activeGroupLabel = activeGroup ? (activeGroup.group_name || activeGroup.group_key) : '全部分组';
+    const activeGroupProjectionSuspended = activeGroup?.projection_suspended === true;
+    const activeGroupSuspensionReason = activeGroup?.projection_suspend_reason || activeGroup?.model_sync_message || '';
     const activeQuickFilterCount = panelPreferences.quickFilters.length;
     const pendingKeyGroups = useMemo(
         () => visibleGroups.filter((group) => !group.has_keys),
@@ -1916,6 +1919,7 @@ function SiteAccountPanel({
                                                 <div className="text-[11px] text-muted-foreground">
                                                     {group.models.length} 模型 · Key {group.enabled_key_count}/{group.key_count}
                                                     {group.projection_disabled ? ' · 不投影' : ''}
+                                                    {group.projection_suspended ? ' · 已暂停' : ''}
                                                     {group.masked_pending_key_count > 0 ? ` · 待补全 ${group.masked_pending_key_count}` : ''}
                                                     {group.has_projected_channel ? ` · 投影 ${group.projected_keys.length}` : ''}
                                                 </div>
@@ -1923,6 +1927,10 @@ function SiteAccountPanel({
                                             {!group.has_keys ? (
                                                 <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
                                                     待建
+                                                </span>
+                                            ) : group.projection_suspended ? (
+                                                <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive">
+                                                    暂停
                                                 </span>
                                             ) : group.masked_pending_key_count > 0 && group.enabled_key_count === 0 ? (
                                                 <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
@@ -1946,6 +1954,18 @@ function SiteAccountPanel({
                         </div>
                     </div>
 
+                    {activeGroupProjectionSuspended ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                            <div className="min-w-0">
+                                <div className="font-medium">该分组投影已由系统暂停</div>
+                                <div className="mt-0.5 break-words text-destructive/80">
+                                    {activeGroupSuspensionReason || '最近一次模型同步未能确认可用模型，历史模型仅供查看。重新同步成功后会自动恢复投影。'}
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             type="button"
@@ -1965,13 +1985,14 @@ function SiteAccountPanel({
                             className={cn(
                                 'h-8 rounded-2xl px-3',
                                 activeGroup?.projection_disabled && 'border-amber-500/30 bg-amber-500/10 text-amber-800 hover:bg-amber-500/15 hover:text-amber-900 dark:text-amber-200 dark:hover:text-amber-100',
+                                activeGroupProjectionSuspended && 'border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15',
                             )}
                             onClick={() => activeGroup && handleToggleGroupProjection(activeGroup)}
                             disabled={!activeGroup || groupProjectionMutation.isPending}
-                            title={!activeGroup ? '请先选择具体分组' : activeGroup.projection_disabled ? '恢复生成投影渠道并显示到分组编辑' : '停止生成投影渠道并从分组编辑中移除'}
+                            title={!activeGroup ? '请先选择具体分组' : activeGroupProjectionSuspended ? `系统已暂停投影：${activeGroupSuspensionReason || '最近模型同步失败，请重新同步恢复'}` : activeGroup.projection_disabled ? '恢复生成投影渠道并显示到分组编辑' : '停止生成投影渠道并从分组编辑中移除'}
                         >
-                            <Waypoints className={cn('size-4', groupProjectionMutation.isPending && 'animate-spin')} />
-                            {activeGroup?.projection_disabled ? '不投影' : '投影'}
+                            {activeGroupProjectionSuspended ? <CirclePause className="size-4" /> : <Waypoints className={cn('size-4', groupProjectionMutation.isPending && 'animate-spin')} />}
+                            {activeGroupProjectionSuspended ? '已暂停' : activeGroup?.projection_disabled ? '不投影' : '投影'}
                         </Button>
 
                         <Popover>

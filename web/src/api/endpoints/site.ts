@@ -46,6 +46,17 @@ export type SiteUserGroup = {
   group_key: string;
   name: string;
   raw_payload?: string | null;
+  projection_disabled?: boolean;
+  projection_suspended?: boolean;
+  projection_suspend_reason?: string;
+  projection_suspended_at?: string | null;
+  model_sync_status?: 'idle' | 'synced' | 'empty' | 'failed' | 'unresolved' | 'missing_key' | 'removed';
+  model_sync_message?: string;
+  model_sync_authoritative?: boolean;
+  model_sync_model_count?: number;
+  last_model_sync_at?: string | null;
+  last_model_sync_success_at?: string | null;
+  model_sync_failure_count?: number;
 };
 
 export type SiteModel = {

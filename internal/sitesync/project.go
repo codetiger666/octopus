@@ -40,7 +40,9 @@ func ProjectAccount(ctx context.Context, accountID int) ([]int, error) {
 	groupMap := make(map[string]model.SiteUserGroup)
 	for _, item := range account.UserGroups {
 		key := model.NormalizeSiteGroupKey(item.GroupKey)
-		groupMap[key] = model.SiteUserGroup{ID: item.ID, SiteAccountID: account.ID, GroupKey: key, Name: model.NormalizeSiteGroupName(key, item.Name), RawPayload: item.RawPayload, ProjectionDisabled: item.ProjectionDisabled}
+		item.GroupKey = key
+		item.Name = model.NormalizeSiteGroupName(key, item.Name)
+		groupMap[key] = item
 	}
 	if len(groupMap) == 0 {
 		groupMap[model.SiteDefaultGroupKey] = model.SiteUserGroup{SiteAccountID: account.ID, GroupKey: model.SiteDefaultGroupKey, Name: model.SiteDefaultGroupName}
@@ -67,6 +69,10 @@ func ProjectAccount(ctx context.Context, accountID int) ([]int, error) {
 			continue
 		}
 		groupKey := model.NormalizeSiteGroupKey(item.GroupKey)
+		group, ok := groupMap[groupKey]
+		if !ok || !isSiteGroupProjectionActive(siteRecord, account, group, tokenGroups[groupKey]) {
+			continue
+		}
 		item.GroupKey = groupKey
 		item.ModelName = name
 		if !siteModelBelongsToProjectedGroup(item, groupKey) {
@@ -97,7 +103,7 @@ func ProjectAccount(ctx context.Context, accountID int) ([]int, error) {
 
 	desiredKeys := make([]string, 0, len(groupMap))
 	for groupKey, group := range groupMap {
-		if len(tokenGroups[groupKey]) > 0 && !group.ProjectionDisabled {
+		if isSiteGroupProjectionActive(siteRecord, account, group, tokenGroups[groupKey]) {
 			desiredKeys = append(desiredKeys, groupKey)
 		}
 	}
@@ -232,7 +238,7 @@ func ProjectAccount(ctx context.Context, accountID int) ([]int, error) {
 			desiredSet[compositeBindingKey(groupKey, obType, shouldSplit)] = struct{}{}
 		}
 	}
-	if err := rewriteManagedGroupItemsForAccount(ctx, account.ID, shouldSplit, account.Models, bindingChannelByKey); err != nil {
+	if err := rewriteManagedGroupItemsForAccount(ctx, siteRecord, account, shouldSplit, groupMap, tokenGroups, account.Models, bindingChannelByKey); err != nil {
 		return nil, err
 	}
 	for _, binding := range existingBindings {
@@ -249,6 +255,25 @@ func ProjectAccount(ctx context.Context, accountID int) ([]int, error) {
 	}
 
 	return managedChannelIDs, nil
+}
+
+func isSiteGroupProjectionActive(siteRecord *model.Site, account *model.SiteAccount, group model.SiteUserGroup, tokens []model.SiteToken) bool {
+	if siteRecord == nil || account == nil {
+		return false
+	}
+	if !siteRecord.Enabled || !account.Enabled {
+		return false
+	}
+	if len(tokens) == 0 {
+		return false
+	}
+	if group.ProjectionDisabled || group.ProjectionSuspended {
+		return false
+	}
+	if group.ModelSyncStatus == "" || group.ModelSyncStatus == model.SiteGroupModelSyncStatusIdle {
+		return true
+	}
+	return group.ModelSyncStatus == model.SiteGroupModelSyncStatusSynced
 }
 
 func ProjectSite(ctx context.Context, siteID int) error {
@@ -542,10 +567,11 @@ func parseCompositeBindingKey(groupKey string) (string, model.SiteModelRouteType
 	return model.ParseSiteChannelBindingKey(groupKey)
 }
 
-func rewriteManagedGroupItemsForAccount(ctx context.Context, accountID int, split bool, accountModels []model.SiteModel, bindingChannelByKey map[string]int) error {
-	if len(bindingChannelByKey) == 0 {
+func rewriteManagedGroupItemsForAccount(ctx context.Context, siteRecord *model.Site, account *model.SiteAccount, split bool, groupMap map[string]model.SiteUserGroup, tokenGroups map[string][]model.SiteToken, accountModels []model.SiteModel, bindingChannelByKey map[string]int) error {
+	if account == nil {
 		return nil
 	}
+	accountID := account.ID
 	var bindings []model.SiteChannelBinding
 	if err := db.GetDB().WithContext(ctx).Where("site_account_id = ?", accountID).Find(&bindings).Error; err != nil {
 		return fmt.Errorf("failed to list bindings for group rewrite: %w", err)
@@ -568,6 +594,19 @@ func rewriteManagedGroupItemsForAccount(ctx context.Context, accountID int, spli
 	activeModelKeys := make(map[string]struct{})
 	for _, item := range accountModels {
 		if item.Disabled {
+			continue
+		}
+		baseGroupKey := model.NormalizeSiteGroupKey(item.GroupKey)
+		group, ok := groupMap[baseGroupKey]
+		if !ok || !isSiteGroupProjectionActive(siteRecord, account, group, tokenGroups[baseGroupKey]) {
+			continue
+		}
+		if !siteModelBelongsToProjectedGroup(item, baseGroupKey) {
+			continue
+		}
+		item.GroupKey = baseGroupKey
+		item.ModelName = strings.TrimSpace(item.ModelName)
+		if item.ModelName == "" {
 			continue
 		}
 		key := model.NormalizeSiteGroupKey(item.GroupKey) + "\x00" + strings.TrimSpace(item.ModelName)

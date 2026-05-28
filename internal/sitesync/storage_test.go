@@ -366,4 +366,18 @@ func TestPersistSyncSnapshotReplacesOnlyAuthoritativeGroups(t *testing.T) {
 	if reloaded.LastSyncMessage != snapshot.message {
 		t.Fatalf("expected last_sync_message %q, got %q", snapshot.message, reloaded.LastSyncMessage)
 	}
+
+	var vipReloaded model.SiteUserGroup
+	if err := dbpkg.GetDB().WithContext(ctx).Where("site_account_id = ? AND group_key = ?", account.ID, "vip").First(&vipReloaded).Error; err != nil {
+		t.Fatalf("query vip group failed: %v", err)
+	}
+	if !vipReloaded.ProjectionSuspended {
+		t.Fatalf("expected failed vip group projection to be suspended")
+	}
+	if vipReloaded.ModelSyncStatus != model.SiteGroupModelSyncStatusFailed {
+		t.Fatalf("expected failed vip model sync status, got %q", vipReloaded.ModelSyncStatus)
+	}
+	if vipReloaded.ModelSyncFailureCount != 1 {
+		t.Fatalf("expected vip failure count 1, got %d", vipReloaded.ModelSyncFailureCount)
+	}
 }

@@ -184,7 +184,7 @@ func buildSiteChannelGroups(ctx context.Context, site model.Site, account model.
 	projectedChannels := make(map[int]*model.Channel)
 	for _, group := range account.UserGroups {
 		key := model.NormalizeSiteGroupKey(group.GroupKey)
-		groups[key] = &model.SiteChannelGroup{GroupKey: key, GroupName: model.NormalizeSiteGroupName(key, group.Name), ProjectionDisabled: group.ProjectionDisabled, ProjectedChannelIDs: make([]int, 0), ProjectedChannels: make([]model.SiteProjectedChannelSettings, 0), SourceKeys: make([]model.SiteSourceKey, 0), ProjectedKeys: make([]model.SiteProjectedKey, 0), Models: make([]model.SiteChannelModel, 0)}
+		groups[key] = newSiteChannelGroupView(key, model.NormalizeSiteGroupName(key, group.Name), group)
 	}
 	for _, token := range account.Tokens {
 		key := model.NormalizeSiteGroupKey(token.GroupKey)
@@ -340,9 +340,51 @@ func ensureSiteChannelGroup(groups map[string]*model.SiteChannelGroup, groupKey 
 		}
 		return item
 	}
-	item := &model.SiteChannelGroup{GroupKey: groupKey, GroupName: model.NormalizeSiteGroupName(groupKey, groupName), ProjectedChannelIDs: make([]int, 0), ProjectedChannels: make([]model.SiteProjectedChannelSettings, 0), SourceKeys: make([]model.SiteSourceKey, 0), ProjectedKeys: make([]model.SiteProjectedKey, 0), Models: make([]model.SiteChannelModel, 0)}
+	item := newSiteChannelGroupView(groupKey, model.NormalizeSiteGroupName(groupKey, groupName), model.SiteUserGroup{})
 	groups[groupKey] = item
 	return item
+}
+
+func newSiteChannelGroupView(groupKey string, groupName string, group model.SiteUserGroup) *model.SiteChannelGroup {
+	var projectionSuspendedAt *int64
+	if group.ProjectionSuspendedAt != nil && !group.ProjectionSuspendedAt.IsZero() {
+		unix := group.ProjectionSuspendedAt.UnixMilli()
+		projectionSuspendedAt = &unix
+	}
+	var lastModelSyncAt *int64
+	if group.LastModelSyncAt != nil && !group.LastModelSyncAt.IsZero() {
+		unix := group.LastModelSyncAt.UnixMilli()
+		lastModelSyncAt = &unix
+	}
+	var lastModelSyncSuccessAt *int64
+	if group.LastModelSyncSuccessAt != nil && !group.LastModelSyncSuccessAt.IsZero() {
+		unix := group.LastModelSyncSuccessAt.UnixMilli()
+		lastModelSyncSuccessAt = &unix
+	}
+	status := group.ModelSyncStatus
+	if status == "" {
+		status = model.SiteGroupModelSyncStatusIdle
+	}
+	return &model.SiteChannelGroup{
+		GroupKey:                groupKey,
+		GroupName:               groupName,
+		ProjectionDisabled:      group.ProjectionDisabled,
+		ProjectionSuspended:     group.ProjectionSuspended,
+		ProjectionSuspendReason: group.ProjectionSuspendReason,
+		ProjectionSuspendedAt:   projectionSuspendedAt,
+		ModelSyncStatus:         status,
+		ModelSyncMessage:        group.ModelSyncMessage,
+		ModelSyncAuthoritative:  group.ModelSyncAuthoritative,
+		ModelSyncModelCount:     group.ModelSyncModelCount,
+		LastModelSyncAt:         lastModelSyncAt,
+		LastModelSyncSuccessAt:  lastModelSyncSuccessAt,
+		ModelSyncFailureCount:   group.ModelSyncFailureCount,
+		ProjectedChannelIDs:     make([]int, 0),
+		ProjectedChannels:       make([]model.SiteProjectedChannelSettings, 0),
+		SourceKeys:              make([]model.SiteSourceKey, 0),
+		ProjectedKeys:           make([]model.SiteProjectedKey, 0),
+		Models:                  make([]model.SiteChannelModel, 0),
+	}
 }
 
 func normalizeEditableSourceTokenValue(value string) (string, error) {
