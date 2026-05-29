@@ -79,6 +79,7 @@ import {
 import { toast } from '@/components/common/Toast';
 import { cn, formatCount, formatMoney } from '@/lib/utils';
 import { getModelIcon } from '@/lib/model-icons';
+import type { ToolbarSortField, ToolbarSortOrder } from '@/components/modules/toolbar/view-options-store';
 import { useSettingStore } from '@/stores/setting';
 import {
     type SiteChannelAccount,
@@ -142,8 +143,6 @@ import {
     useSiteChannelPanelViewStore,
 } from './ui-store';
 
-type ToolbarSortField = 'name' | 'created';
-type ToolbarSortOrder = 'asc' | 'desc';
 type SiteChannelPendingJump = PendingJump & { target: SiteChannelJumpTarget };
 type UnifiedCompletionInputState = Record<number, string>;
 type UnifiedCompletionErrorState = Record<string, string>;
@@ -689,6 +688,24 @@ const QUICK_FILTER_OPTIONS: Array<{
 ];
 
 const SITE_GROUP_FILTER_ALL_VALUE = '__site-group-all__';
+
+const STALE_MODEL_SYNC_STATUSES = ['stale', 'failed', 'unresolved'];
+
+function getGroupStatusBadge(group: SiteChannelGroup): { label: string; className: string } | null {
+    if (group.projection_suspended) {
+        return { label: '暂停', className: 'rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive' };
+    }
+    if (!group.has_keys) {
+        return { label: '待建', className: 'rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300' };
+    }
+    if (STALE_MODEL_SYNC_STATUSES.includes(group.model_sync_status)) {
+        return { label: '沿用', className: 'rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300' };
+    }
+    if (group.masked_pending_key_count > 0 && group.enabled_key_count === 0) {
+        return { label: '待补全', className: 'rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300' };
+    }
+    return null;
+}
 
 function HistorySummary({ model }: { model: SiteModelView }) {
     const summary = summarizeHistory(model.history);
@@ -1797,7 +1814,7 @@ function SiteAccountPanel({
         : null;
     const activeGroupLabel = activeGroup ? (activeGroup.group_name || activeGroup.group_key) : '全部分组';
     const activeGroupProjectionSuspended = activeGroup?.projection_suspended === true;
-    const activeGroupProjectionStale = activeGroup && !activeGroupProjectionSuspended && ['stale', 'failed', 'unresolved'].includes(activeGroup.model_sync_status);
+    const activeGroupProjectionStale = activeGroup && !activeGroupProjectionSuspended && STALE_MODEL_SYNC_STATUSES.includes(activeGroup.model_sync_status);
     const activeGroupSuspensionReason = activeGroup?.projection_suspend_reason || activeGroup?.model_sync_message || '';
     const activeGroupStaleReason = activeGroup?.model_sync_message || '';
     const activeQuickFilterCount = panelPreferences.quickFilters.length;
@@ -1921,28 +1938,17 @@ function SiteAccountPanel({
                                                 <div className="text-[11px] text-muted-foreground">
                                                     {group.models.length} 模型 · Key {group.enabled_key_count}/{group.key_count}
                                                     {group.projection_disabled ? ' · 不投影' : ''}
-                                                    {group.projection_suspended ? ' · 已暂停' : ['stale', 'failed', 'unresolved'].includes(group.model_sync_status) ? ' · 沿用历史' : ''}
+                                                    {group.projection_suspended ? ' · 已暂停' : STALE_MODEL_SYNC_STATUSES.includes(group.model_sync_status) ? ' · 沿用历史' : ''}
                                                     {group.masked_pending_key_count > 0 ? ` · 待补全 ${group.masked_pending_key_count}` : ''}
                                                     {group.has_projected_channel ? ` · 投影 ${group.projected_keys.length}` : ''}
                                                 </div>
                                             </div>
-                                            {group.projection_suspended ? (
-                                                <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive">
-                                                    暂停
-                                                </span>
-                                            ) : !group.has_keys ? (
-                                                <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
-                                                    待建
-                                                </span>
-                                            ) : ['stale', 'failed', 'unresolved'].includes(group.model_sync_status) ? (
-                                                <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
-                                                    沿用
-                                                </span>
-                                            ) : group.masked_pending_key_count > 0 && group.enabled_key_count === 0 ? (
-                                                <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
-                                                    待补全
-                                                </span>
-                                            ) : null}
+                                            {(() => {
+                                                const statusBadge = getGroupStatusBadge(group);
+                                                return statusBadge ? (
+                                                    <span className={statusBadge.className}>{statusBadge.label}</span>
+                                                ) : null;
+                                            })()}
                                         </div>
                                     </SelectItem>
                                 ))}

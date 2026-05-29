@@ -120,7 +120,7 @@ func ProjectAccount(ctx context.Context, accountID int) ([]int, error) {
 		modelBuckets := partitionSiteModelsByRouteType(groupModels, shouldSplit, siteRecord.Platform)
 		proxyMode, proxyConfigID := resolveSiteAccountProxy(siteRecord, account)
 		baseUrls := []model.BaseUrl{{URL: buildProjectedChannelBaseURL(siteRecord), Delay: 0}}
-		enabled := siteRecord.Enabled && account.Enabled && len(groupTokens) > 0
+		enabled := siteRecord.Enabled && account.Enabled && hasUsableToken(groupTokens)
 		for routeType, bucketModels := range modelBuckets {
 			if len(bucketModels) == 0 {
 				continue
@@ -274,7 +274,7 @@ func isSiteGroupProjectionActive(siteRecord *model.Site, account *model.SiteAcco
 	if !siteRecord.Enabled || !account.Enabled {
 		return false
 	}
-	if len(tokens) == 0 {
+	if !hasUsableToken(tokens) {
 		return false
 	}
 	if group.ProjectionDisabled || group.ProjectionSuspended {
@@ -402,16 +402,33 @@ func buildProjectedChannelBaseURL(siteRecord *model.Site) string {
 	}
 	return baseURL + "/v1"
 }
+// isUsableSiteToken reports whether a token can produce a projected channel
+// key: it must be ready, unmasked, and carry a non-empty normalized value.
+func isUsableSiteToken(token model.SiteToken) bool {
+	if !model.IsReadySiteToken(token) || model.IsMaskedSiteTokenValue(token.Token) {
+		return false
+	}
+	return model.NormalizeSiteSyncTokenValue(token.Token) != ""
+}
+
+// hasUsableToken reports whether at least one token would yield a channel key,
+// keeping projection activation aligned with buildChannelKeys.
+func hasUsableToken(tokens []model.SiteToken) bool {
+	for _, token := range tokens {
+		if isUsableSiteToken(token) {
+			return true
+		}
+	}
+	return false
+}
+
 func buildChannelKeys(tokens []model.SiteToken) []model.ChannelKey {
 	keys := make([]model.ChannelKey, 0, len(tokens))
 	for _, token := range tokens {
-		if !model.IsReadySiteToken(token) || model.IsMaskedSiteTokenValue(token.Token) {
+		if !isUsableSiteToken(token) {
 			continue
 		}
 		normalized := model.NormalizeSiteSyncTokenValue(token.Token)
-		if normalized == "" {
-			continue
-		}
 		keys = append(keys, model.ChannelKey{Enabled: token.Enabled, ChannelKey: normalized, Remark: model.NormalizeSiteGroupName(token.GroupKey, token.GroupName)})
 	}
 	return keys

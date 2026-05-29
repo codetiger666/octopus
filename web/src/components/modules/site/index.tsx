@@ -1414,8 +1414,11 @@ export function Site() {
         toast.error(summary);
       } else if (result.status === "partial") {
         toast.warning(summary);
-      } else {
+      } else if (result.status === "success") {
         toast.success(summary);
+      } else {
+        console.warn(`Unexpected site sync status: ${result.status}`);
+        toast.error(summary);
       }
     } catch (syncError) {
       toast.error(translateSiteMessage(locale, getErrorMessage(syncError), t));
